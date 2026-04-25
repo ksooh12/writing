@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>今日の3文</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@300;400;500;700&family=Noto+Serif+KR:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; background: #fdf6ee; font-family: 'Noto Serif KR', Georgia, serif; color: #2d1f0e; }
+  .jp { font-family: 'M PLUS 1p', sans-serif; letter-spacing: 0.02em; }
+
+  #header {
+    background: #fffcf7; border-bottom: 1.5px solid #e8d9c4;
+    padding: 14px 18px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 10;
+  }
+  .logo { font-family: 'M PLUS 1p', sans-serif; font-size: 20px; font-weight: 700; color: #c9602a; }
+  .logo-sub { font-size: 11px; color: #a08060; }
+  .streak-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #fff4e6; border: 1.5px solid #ffd9a8;
+    border-radius: 20px; padding: 4px 12px; font-size: 14px;
+  }
+  .streak-count { font-weight: 700; color: #c9602a; }
+  .streak-label { color: #a08060; font-size: 12px; }
+
+  nav { display: flex; gap: 8px; justify-content: center; padding: 10px 0 4px; }
+  .nav-btn {
+    background: none; border: none; font-family: inherit; font-size: 13px;
+    color: #a08060; cursor: pointer; padding: 6px 14px; border-radius: 20px; transition: all 0.2s;
+  }
+  .nav-btn.active { background: #fef0e7; color: #c9602a; font-weight: 600; }
+
+  #app { max-width: 500px; margin: 0 auto; padding: 14px 14px 80px; }
+
+  .card {
+    background: #fffcf7; border: 1.5px solid #e8d9c4; border-radius: 16px;
+    padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(180,140,80,0.07);
+  }
+  .divider { height: 1px; background: linear-gradient(to right,transparent,#e8d9c4,transparent); margin: 12px 0; }
+
+    /* 설정 모달 */
+  #settingModal {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.35); align-items: flex-start; justify-content: center;
+    padding-top: 80px;
+  }
+  #settingModal.open { display: flex; }
+  .modal-box {
+    background: #fffcf7; border-radius: 16px; padding: 22px 20px;
+    width: calc(100% - 32px); max-width: 460px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    animation: slideDown 0.25s ease;
+  }
+  @keyframes slideDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .modal-title { font-size: 15px; font-weight: 600; color: #c9602a; }
+  .modal-close { background: none; border: none; font-size: 20px; color: #a08060; cursor: pointer; line-height: 1; padding: 0 2px; }
+  .modal-close:hover { color: #c9602a; }
+  .key-desc { font-size: 12px; color: #8a7060; line-height: 1.7; margin-bottom: 12px; }
+  .key-desc a { color: #c9602a; text-decoration: none; }
+  .key-desc a:hover { text-decoration: underline; }
+  .key-row { display: flex; gap: 8px; }
+  #apiKeyInput {
+    flex: 1; border: 1.5px solid #ddd0bc; border-radius: 10px;
+    padding: 10px 12px; font-size: 13px; font-family: monospace;
+    background: #fdfaf6; outline: none; color: #2d1f0e; transition: border 0.2s;
+  }
+  #apiKeyInput:focus { border-color: #c9602a; }
+  #apiKeyInput::placeholder { color: #c0b0a0; }
+  .key-saved { font-size: 12px; color: #27ae60; margin-top: 8px; display: none; }
+  /* 설정 아이콘 */
+  #settingIconBtn {
+    background: none; border: none; font-size: 17px; cursor: pointer;
+    padding: 5px 8px; border-radius: 20px; color: #a08060; transition: all 0.2s; line-height: 1;
+  }
+  #settingIconBtn:hover { background: #fef0e7; color: #c9602a; }
+  .key-note {
+    font-size: 11px; color: #b0a090; margin-top: 10px; line-height: 1.6;
+    padding: 8px 10px; background: #fdf6ee; border-radius: 8px;
+  }
+
+  .hints { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+  .hint-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #fef0e7; border: 1px solid #f5d5b8;
+    border-radius: 20px; padding: 4px 12px; font-size: 13px;
+  }
+  .hint-jp { font-family: 'M PLUS 1p', sans-serif; font-weight: 500; }
+  .hint-read { font-size: 11px; color: #a08060; font-family: 'M PLUS 1p', sans-serif; }
+  .hint-ko { color: #a08060; }
+
+
+
+  .num-label { font-size: 11px; color: #c9602a; font-weight: 700; letter-spacing: 1px; margin-bottom: 7px; }
+  textarea {
+    width: 100%; border: 1.5px solid #ddd0bc; border-radius: 10px;
+    padding: 11px 13px; font-size: 15px;
+    font-family: 'M PLUS 1p', sans-serif; font-weight: 400;
+    background: #fdfaf6; color: #2d1f0e;
+    resize: none; outline: none; transition: border 0.2s; line-height: 1.9;
+  }
+  textarea::placeholder { color: #b8a890; font-size: 14px; letter-spacing: 0; }
+  textarea:focus { border-color: #c9602a; background: white; }
+
+  .btn-main {
+    background: #c9602a; color: white; border: none; border-radius: 12px;
+    padding: 14px; font-size: 16px; font-family: inherit; cursor: pointer;
+    width: 100%; font-weight: 600; transition: all 0.2s;
+  }
+  .btn-main:hover { background: #a84e20; transform: translateY(-1px); }
+  .btn-main:disabled { background: #d4b99a; cursor: not-allowed; transform: none; }
+  .btn-ghost {
+    background: transparent; border: 1.5px solid #c9602a; color: #c9602a;
+    border-radius: 10px; padding: 10px 14px; font-size: 14px;
+    font-family: inherit; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-ghost:hover { background: #fef0e7; }
+  .btn-sm {
+    background: #c9602a; color: white; border: none; border-radius: 6px;
+    padding: 8px 12px; font-size: 12px; font-family: inherit;
+    cursor: pointer; white-space: nowrap; font-weight: 600;
+  }
+  .btn-sm:hover { background: #a84e20; }
+  .btn-row { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-row .btn-ghost { flex: 1; }
+  .btn-row .btn-main { flex: 2; }
+
+  .overall-card {
+    background: linear-gradient(135deg,#fef9f2,#fff4e6); border: 1.5px solid #f5d5b8;
+    border-radius: 16px; padding: 18px; margin-bottom: 14px;
+  }
+  .section-label { font-size: 11px; color: #a08060; margin-bottom: 5px; letter-spacing: 0.5px; }
+  .overall-text { font-size: 15px; line-height: 1.85; color: #4a3020; }
+
+  .correction-card {
+    background: #fffcf7; border: 1.5px solid #e8d9c4; border-radius: 16px;
+    padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(180,140,80,0.07);
+  }
+  .corr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .corr-num { font-size: 12px; color: #a08060; }
+  .badge { display: inline-block; border-radius: 20px; padding: 3px 12px; font-size: 12px; font-weight: 600; color: white; }
+  .orig-sentence { font-family: 'M PLUS 1p', sans-serif; font-size: 16px; margin-bottom: 10px; letter-spacing: 0.02em; }
+  .orig-fix { color: #c0392b; text-decoration: line-through; opacity: 0.65; }
+  .orig-ok { color: #2d1f0e; }
+  .corr-sentence { font-family: 'M PLUS 1p', sans-serif; font-size: 16px; color: #27ae60; font-weight: 600; margin-bottom: 10px; letter-spacing: 0.02em; }
+  .reason-box { background: #fafaf8; border: 1px solid #eee; border-radius: 8px; padding: 8px 12px; }
+  .reason-text { font-size: 13px; color: #5a4030; line-height: 1.75; }
+  .tip-text { font-size: 12px; color: #a08060; margin-top: 4px; font-style: italic; }
+
+  .new-expr {
+    background: linear-gradient(135deg,#fef9f2,#fdf0e0); border: 1.5px solid #f5d5b8;
+    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  }
+  .expr-jp { font-family: 'M PLUS 1p', sans-serif; font-size: 22px; font-weight: 700; color: #c9602a; }
+  .expr-read { font-size: 13px; color: #a08060; margin-left: 6px; }
+  .expr-ko { font-size: 14px; color: #5a4030; margin: 4px 0; }
+  .expr-ex { font-family: 'M PLUS 1p', sans-serif; font-size: 13px; color: #8a7060; font-style: italic; letter-spacing: 0.02em; }
+
+  .error-box {
+    background: #fff5f5; border: 1.5px solid #fca5a5; border-radius: 12px;
+    padding: 18px; color: #c0392b; line-height: 1.8; font-size: 14px;
+    word-break: break-all; margin-bottom: 12px;
+  }
+
+  .hist-count { font-size: 13px; color: #a08060; margin-bottom: 14px; text-align: center; }
+  .hist-card {
+    background: #fffcf7; border: 1.5px solid #e8d9c4; border-left: 3px solid #c9602a;
+    border-radius: 16px; padding: 16px; margin-bottom: 14px;
+    box-shadow: 0 2px 12px rgba(180,140,80,0.07);
+  }
+  .hist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .hist-date { font-size: 12px; color: #a08060; }
+  .hist-topic { font-family: 'M PLUS 1p', sans-serif; font-size: 13px; color: #c9602a; }
+  .hist-sentence { font-family: 'M PLUS 1p', sans-serif; font-size: 14px; color: #4a3020; line-height: 1.8; margin-bottom: 2px; }
+  .hist-overall { font-size: 12px; color: #8a7060; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-style: italic; line-height: 1.6; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .fade-in { animation: fadeIn 0.35s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <div class="logo jp">今日の3文</div>
+    <div class="logo-sub">오늘의 일본어 작문</div>
+  </div>
+  <div class="streak-pill">
+    🔥 <span class="streak-count" id="streakCount">0</span>
+    <span class="streak-label">일 연속</span>
+  </div>
+</div>
+
+<nav>
+  <button class="nav-btn active" data-target="home" onclick="goScreen('home')">✏️ 오늘 작문</button>
+  <button class="nav-btn" data-target="history" onclick="goScreen('history')">📖 내 기록</button>
+  <button id="settingIconBtn" onclick="openSetting()" title="API 키 설정">⚙️</button>
+</nav>
+
+<!-- 설정 모달 -->
+<div id="settingModal" onclick="closeSetting(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">🔑 Gemini API 키 설정</span>
+      <button class="modal-close" onclick="closeSetting()">✕</button>
+    </div>
+    <div class="key-desc">
+      <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>에서
+      무료로 발급받을 수 있어요.<br>발급 후 아래에 붙여넣고 저장해주세요.
+    </div>
+    <div class="key-row">
+      <input type="password" id="apiKeyInput" placeholder="AIza..." autocomplete="off" oninput="onKeyInput()">
+      <button class="btn-sm" onclick="saveApiKey()">저장</button>
+    </div>
+    <div class="key-saved" id="keySavedMsg">✅ 저장됐어요!</div>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- 홈 -->
+  <div class="screen active fade-in" id="screen-home">
+
+    <!-- 주제 카드 -->
+    <div class="card" style="border-left:4px solid #c9602a;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <span id="topicEmoji" style="font-size:26px;"></span>
+        <div>
+          <div style="font-size:11px;color:#a08060;margin-bottom:2px;">오늘의 주제</div>
+          <div id="topicTitle" class="jp" style="font-size:20px;font-weight:700;"></div>
+          <div id="topicKorean" style="font-size:13px;color:#8a7060;"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:11px;color:#a08060;margin-bottom:8px;">💡 힌트 단어</div>
+      <div class="hints" id="hintsContainer"></div>
+    </div>
+
+
+
+    <!-- 문장 입력 -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="num-label">문장 1</div>
+      <textarea id="s0" rows="2" oninput="checkSubmit()"></textarea>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="num-label">문장 2</div>
+      <textarea id="s1" rows="2" oninput="checkSubmit()"></textarea>
+    </div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="num-label">문장 3</div>
+      <textarea id="s2" rows="2" oninput="checkSubmit()"></textarea>
+    </div>
+
+    <button class="btn-main" id="submitBtn" onclick="handleSubmit()" disabled>📮 첨삭 받기</button>
+  </div>
+
+  <!-- 결과 -->
+  <div class="screen fade-in" id="screen-result">
+    <div id="resultContent"></div>
+  </div>
+
+  <!-- 기록 -->
+  <div class="screen fade-in" id="screen-history">
+    <div id="historyContent"></div>
+  </div>
+
+</div>
+
+<script>
+const TOPICS = [
+  {
+    emoji:"☀️", title:"今日の天気", korean:"오늘 날씨",
+    hints:[{jp:"晴れ",read:"はれ",ko:"맑음"},{jp:"暑い",read:"あつい",ko:"덥다"},{jp:"気持ちいい",read:"きもちいい",ko:"기분 좋다"}],
+    placeholders:["今日は______です。","空が______ですね。","外で______したいです。"]
+  },
+  {
+    emoji:"🍜", title:"好きな食べ物", korean:"좋아하는 음식",
+    hints:[{jp:"おいしい",read:"おいしい",ko:"맛있다"},{jp:"辛い",read:"からい",ko:"맵다"},{jp:"甘い",read:"あまい",ko:"달다"}],
+    placeholders:["私は______が好きです。","______はとても______です。","よく______を食べます。"]
+  },
+  {
+    emoji:"📚", title:"勉強のこと", korean:"공부 이야기",
+    hints:[{jp:"難しい",read:"むずかしい",ko:"어렵다"},{jp:"毎日",read:"まいにち",ko:"매일"},{jp:"練習する",read:"れんしゅうする",ko:"연습하다"}],
+    placeholders:["今、______を勉強しています。","______が難しいです。","毎日______したいです。"]
+  },
+  {
+    emoji:"🎵", title:"音楽・趣味", korean:"음악·취미",
+    hints:[{jp:"聴く",read:"きく",ko:"듣다"},{jp:"楽しい",read:"たのしい",ko:"즐겁다"},{jp:"好き",read:"すき",ko:"좋아하다"}],
+    placeholders:["私の趣味は______です。","______を聴くのが好きです。","週末は______します。"]
+  },
+  {
+    emoji:"🌸", title:"季節・自然", korean:"계절·자연",
+    hints:[{jp:"きれい",read:"きれい",ko:"예쁘다"},{jp:"春",read:"はる",ko:"봄"},{jp:"咲く",read:"さく",ko:"피다"}],
+    placeholders:["______の季節が好きです。","花が______います。","自然の中で______したいです。"]
+  },
+  {
+    emoji:"🏠", title:"家・部屋", korean:"집·방",
+    hints:[{jp:"広い",read:"ひろい",ko:"넓다"},{jp:"掃除する",read:"そうじする",ko:"청소하다"},{jp:"くつろぐ",read:"くつろぐ",ko:"쉬다"}],
+    placeholders:["私の部屋は______です。","家で______するのが好きです。","今日は______を掃除しました。"]
+  },
+];
+
+const topic = TOPICS[new Date().getDate() % TOPICS.length];
+
+
+/* ── localStorage ── */
+function getApiKey() { return localStorage.getItem("jp_gemini_key") || ""; }
+
+function saveApiKey() {
+  const key = document.getElementById("apiKeyInput").value.trim();
+  if (!key) return;
+  localStorage.setItem("jp_gemini_key", key);
+  document.getElementById("keySavedMsg").style.display = "block";
+  updateSettingIcon(true);
+  checkSubmit();
+  setTimeout(() => closeSetting(), 900);
+}
+
+function onKeyInput() {
+  document.getElementById("keySavedMsg").style.display = "none";
+  checkSubmit();
+}
+
+function getStreak() {
+  try {
+    const d = JSON.parse(localStorage.getItem("jp_streak") || "{}");
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    if (d.lastDate === today) return d.count;
+    if (d.lastDate === yesterday) return d.count;
+    return 0;
+  } catch { return 0; }
+}
+
+function saveStreak() {
+  try {
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    const d = JSON.parse(localStorage.getItem("jp_streak") || "{}");
+    const n = d.lastDate === today ? d.count : d.lastDate === yesterday ? d.count + 1 : 1;
+    localStorage.setItem("jp_streak", JSON.stringify({ lastDate: today, count: n }));
+    document.getElementById("streakCount").textContent = n;
+  } catch {}
+}
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem("jp_history") || "[]"); } catch { return []; }
+}
+
+function saveHistory(entry) {
+  try {
+    const h = getHistory();
+    h.unshift(entry);
+    localStorage.setItem("jp_history", JSON.stringify(h.slice(0, 50)));
+  } catch {}
+}
+
+/* ── 초기화 ── */
+function init() {
+  document.getElementById("topicEmoji").textContent = topic.emoji;
+  document.getElementById("topicTitle").textContent = topic.title;
+  document.getElementById("topicKorean").textContent = topic.korean;
+  document.getElementById("hintsContainer").innerHTML = topic.hints.map(h =>
+    `<div class="hint-tag">
+      <span class="hint-jp">${h.jp}</span>
+      <span class="hint-read">(${h.read})</span>
+      <span class="hint-ko">= ${h.ko}</span>
+    </div>`).join("");
+  topic.placeholders.forEach((ph, i) => {
+    document.getElementById("s" + i).placeholder = ph;
+  });
+  document.getElementById("streakCount").textContent = getStreak();
+
+  const saved = getApiKey();
+  if (saved) {
+    document.getElementById("apiKeyInput").value = saved;
+    document.getElementById("keySavedMsg").style.display = "block";
+  } else {
+    openSetting();
+  }
+  checkSubmit();
+}
+
+/* ── 설정 모달 ── */
+function openSetting() {
+  document.getElementById("settingModal").classList.add("open");
+}
+function closeSetting(e) {
+  if (e && e.target !== document.getElementById("settingModal")) return;
+  document.getElementById("settingModal").classList.remove("open");
+}
+
+/* ── 화면 전환 ── */
+function goScreen(name) {
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active","fade-in"));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.target === name));
+  const el = document.getElementById("screen-" + name);
+  el.classList.add("active");
+  requestAnimationFrame(() => el.classList.add("fade-in"));
+  if (name === "history") renderHistory();
+}
+
+
+
+/* ── 제출 버튼 활성화 ── */
+function checkSubmit() {
+  const hasText = [0,1,2].some(i => document.getElementById("s"+i).value.trim());
+  const hasKey = !!(getApiKey() || document.getElementById("apiKeyInput").value.trim());
+  document.getElementById("submitBtn").disabled = !(hasText && hasKey);
+}
+
+/* ── Gemini API 호출 ── */
+async function handleSubmit() {
+  const apiKey = document.getElementById("apiKeyInput").value.trim() || getApiKey();
+  if (!apiKey) { alert("API 키를 먼저 입력하고 저장해주세요."); return; }
+
+  const sentences = [0,1,2].map(i => document.getElementById("s"+i).value.trim());
+  if (!sentences.some(s => s)) return;
+
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true;
+  btn.textContent = "✨ 첨삭 중...";
+
+  const writtenLines = sentences
+    .map((s,i) => s ? (i+1)+". "+s : null)
+    .filter(Boolean).join("\n");
+
+  const levelGuide = "중급 학습자입니다. 문법 정확도뿐 아니라 자연스러운 표현과 어휘 선택까지 체크해주세요. 더 세련된 표현이 있으면 적극적으로 제안해주세요.";
+
+  const prompt = `당신은 친절한 일본어 선생님입니다. 학생의 일본어 문장을 첨삭해주세요.
+
+주제: ${topic.title} (${topic.korean})
+레벨 안내: ${levelGuide}
+학생 문장:
+${writtenLines}
+
+아래 JSON 스키마를 반드시 지켜서 응답하세요:
+{
+  "overall": "전체 총평 (한국어, 1~2문장, 레벨에 맞는 톤으로)",
+  "corrections": [
+    {
+      "original": "학생이 쓴 문장",
+      "status": "perfect 또는 good 또는 fix",
+      "corrected": "수정된 문장",
+      "reason": "이유 (한국어, 30자 이내)",
+      "tip": "추가 팁 (한국어, 20자 이내)"
+    }
+  ],
+  "newExpression": {
+    "japanese": "오늘 주제 관련 유용한 표현",
+    "reading": "읽는 법 (히라가나)",
+    "korean": "한국어 뜻",
+    "example": "짧은 예문 (일본어)"
+  }
+}`;
+
+  try {
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",   // Gemini JSON 모드 — 파싱 오류 없음
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        }
+      })
+    });
+
+    const raw = await res.text();
+    if (!res.ok) {
+      let m = "HTTP " + res.status;
+      try { m = JSON.parse(raw)?.error?.message || m; } catch {}
+      throw new Error(m);
+    }
+
+    const data = JSON.parse(raw);
+    // Gemini 응답 구조: candidates[0].content.parts[0].text
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error("Gemini 응답이 비어있어요.");
+
+    const parsed = JSON.parse(text);  // responseMimeType: "application/json" 덕에 항상 순수 JSON
+
+    saveStreak();
+    saveHistory({
+      date: new Date().toLocaleDateString("ko-KR"),
+      timestamp: Date.now(),
+      topic: topic.title,
+      sentences: [...sentences],
+      result: parsed,
+    });
+
+    renderResult(parsed);
+    goScreen("result");
+
+  } catch (err) {
+    renderError(err.message);
+    goScreen("result");
+  }
+
+  btn.disabled = false;
+  btn.textContent = "📮 첨삭 받기";
+  checkSubmit();
+}
+
+/* ── 결과 렌더 ── */
+function sc(s) { return s==="perfect"?"#4ade80":s==="good"?"#fbbf24":"#f87171"; }
+function sl(s) { return s==="perfect"?"완벽해요 ✨":s==="good"?"거의 완벽 👍":"수정 필요 ✏️"; }
+
+function renderResult(r) {
+  let html = `<div class="overall-card">
+    <div class="section-label">선생님의 총평 💬</div>
+    <div class="overall-text">${esc(r.overall)}</div>
+  </div>`;
+
+  (r.corrections || []).forEach((c, i) => {
+    const fix = c.status === "fix";
+    html += `<div class="correction-card" style="border-left:4px solid ${sc(c.status)}">
+      <div class="corr-header">
+        <span class="corr-num">문장 ${i+1}</span>
+        <span class="badge" style="background:${sc(c.status)}">${sl(c.status)}</span>
+      </div>
+      <div class="section-label">내가 쓴 문장</div>
+      <div class="orig-sentence ${fix?"orig-fix":"orig-ok"}">${esc(c.original)}</div>
+      ${c.status !== "perfect"
+        ? `<div class="section-label">수정된 문장</div><div class="corr-sentence">${esc(c.corrected)}</div>`
+        : ""}
+      <div class="reason-box">
+        <div class="reason-text">${esc(c.reason)}</div>
+        ${c.tip ? `<div class="tip-text">💡 ${esc(c.tip)}</div>` : ""}
+      </div>
+    </div>`;
+  });
+
+  if (r.newExpression) {
+    const nx = r.newExpression;
+    html += `<div class="new-expr">
+      <div class="section-label">오늘의 표현 하나 더 🌱</div>
+      <div style="display:flex;align-items:baseline;gap:6px;margin:6px 0 2px;">
+        <span class="expr-jp">${esc(nx.japanese)}</span>
+        <span class="expr-read">(${esc(nx.reading)})</span>
+      </div>
+      <div class="expr-ko">${esc(nx.korean)}</div>
+      <div class="expr-ex">${esc(nx.example)}</div>
+    </div>`;
+  }
+
+  html += `<div class="btn-row">
+    <button class="btn-ghost" onclick="resetHome()">다시 쓰기 ↩️</button>
+    <button class="btn-main" onclick="goScreen('history')">내 기록 보기 📖</button>
+  </div>`;
+
+  document.getElementById("resultContent").innerHTML = html;
+}
+
+function renderError(msg) {
+  document.getElementById("resultContent").innerHTML = `
+    <div class="error-box">❌ ${esc(msg)}</div>
+    <p style="font-size:12px;color:#8a7060;margin:8px 4px 14px;line-height:1.75;">
+      💡 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#c9602a;">Google AI Studio</a>에서
+      API 키를 발급받아 저장해주세요. 키가 이미 있다면 만료됐을 수 있어요.
+    </p>
+    <button class="btn-ghost" style="width:100%;" onclick="goScreen('home')">← 돌아가기</button>`;
+}
+
+/* ── 기록 렌더 ── */
+function renderHistory() {
+  const history = getHistory();
+  const el = document.getElementById("historyContent");
+  if (!history.length) {
+    el.innerHTML = `
+      <div class="hist-count">기록이 없어요</div>
+      <div style="text-align:center;padding:40px 20px;color:#a08060;">
+        <div style="font-size:30px;margin-bottom:10px;">✏️</div>
+        <div>아직 첨삭 기록이 없어요.</div>
+        <div style="font-size:13px;margin-top:4px;">오늘 첫 작문을 해보세요!</div>
+      </div>`;
+    return;
+  }
+
+  let html = `<div class="hist-count">총 ${history.length}건의 첨삭 기록 🎉</div>`;
+  history.forEach(h => {
+    const sents = (h.sentences || []).filter(s => s && s.trim());
+    html += `<div class="hist-card">
+      <div class="hist-header">
+        <span class="hist-date">${esc(h.date)}</span>
+        <span class="hist-topic">${esc(h.topic)}</span>
+      </div>
+      ${sents.map((s,j) => `<div class="hist-sentence">${j+1}. ${esc(s)}</div>`).join("")}
+      ${h.result && h.result.overall
+        ? `<div class="hist-overall">💬 ${esc(h.result.overall)}</div>`
+        : ""}
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+/* ── 홈 리셋 ── */
+function resetHome() {
+  [0,1,2].forEach(i => document.getElementById("s"+i).value = "");
+  checkSubmit();
+  goScreen("home");
+}
+
+/* ── XSS 방지 ── */
+function esc(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+init();
+</script>
+</body>
+</html>
